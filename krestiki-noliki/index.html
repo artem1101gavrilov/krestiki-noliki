@@ -1,0 +1,546 @@
+<!doctype html>
+<html>
+    <head>
+        <meta charset="UTF-8" />
+        <title>hello!</title>
+        <script src="phaser.min.js"></script>
+    </head>
+    <body>
+
+		<script type="text/javascript">
+
+		var game = new Phaser.Game(320, 530, Phaser.CANVAS, 'example', { preload: preload, create: create, update: update, render: render });
+
+		// 0 - пустота
+		// 1 - крестик
+		// 2 - нолик
+		var board = [
+					  [0,0,0,0,0,0,0,0,0],
+					  [0,0,0,0,0,0,0,0,0],
+					  [0,0,0,0,0,0,0,0,0],
+					  [0,0,0,0,0,0,0,0,0],
+					  [0,0,0,0,0,0,0,0,0],
+					  [0,0,0,0,0,0,0,0,0],
+					  [0,0,0,0,0,0,0,0,0],
+					  [0,0,0,0,0,0,0,0,0],
+					  [0,0,0,0,0,0,0,0,0] ];
+		
+		var MainBoard = [
+					  [0,0,0],
+					  [0,0,0],
+					  [0,0,0] ];
+		
+		var YouPlay; // 0 - X | 1 - O 
+		var WhoseTurn; //ход 1 - you, 2 - computer
+		var TextForYourPlaing;
+		var TextWhoWin;
+		
+		//в каком блоке на данный момент
+		var CurrentX;
+		var CurrentY;
+		
+		var StarX = -10;
+		var StarO = -10;
+		
+		//Для хода компьютера
+		var RandomX;
+		var RandomY;
+		var stroka;
+		var stob;
+		
+		function preload() {
+			game.load.image('fon', 'fon.jpg');
+			game.load.image('krestik', 'krestik.jpg');
+			game.load.image('nolik', 'nolik.jpg');
+			game.load.image('krestik2', 'X.png');
+			game.load.image('nolik2', '0.png');
+			game.load.image('krestikStar', 'krestikStar.jpg');
+			game.load.image('nolikStar', 'nolikStar.jpg');
+		}
+
+		
+		function create() {
+			game.physics.startSystem(Phaser.Physics.ARCADE);
+		
+			game.add.sprite(0, 0, 'fon');
+			game.input.mouse.capture = true;
+			
+			//чей ход
+			YouPlay = game.rnd.integerInRange(0,1);
+			
+			TextForYourPlaing = game.add.text(160,320,' ', { font: '30px Arial', fill: '#fff' });
+			TextForYourPlaing.anchor.setTo(0.5, 0.5);
+			TextForYourPlaing.text = "You play - ";
+			
+			CurrentX = -1;
+			CurrentY = -1;
+			
+			if (YouPlay == 0){
+				TextForYourPlaing.text += "X";
+				WhoseTurn = 1;
+			}
+			if (YouPlay == 1){ 
+				TextForYourPlaing.text += "O";
+				WhoseTurn = 2;
+				//HodComputer();
+			}
+			
+			
+			
+			//TextWhoWin = game.add.text(160,360,' ', { font: '30px Arial', fill: '#fff' });
+			TextWhoWin = game.add.text(60,360,' ', { font: '18px Arial', fill: '#fff' });
+			//TextWhoWin.anchor.setTo(0.5, 0.5);
+			TextWhoWin.text = "";
+		}
+		
+		function update() {
+			//TextWhoWin.text = possibleHod();
+			if(WhoseTurn == 2) HodComputer();
+			if(game.input.activePointer.isDown) YourHod(game.input.activePointer.position.x, game.input.activePointer.position.y); 
+			//printBoard();
+		}
+
+		function render() {
+			printBoard();
+			//TextWhoWin.text = "WhoseTurn " + WhoseTurn;
+			//TextWhoWin.text += "\nStroka " + (CurrentX+1);
+			//TextWhoWin.text += "\nStolbec " + (CurrentY+1);
+			//TextWhoWin.text += "\nDown " + game.input.activePointer.isDown;
+			//TextWhoWin.text += "\nAllEndGame " + AllEndGame();
+			//game.debug.inputInfo(32, 392);
+		}
+		
+		function printBoard(){
+			for(var i = 0; i < 9; i++){
+				for(var j = 0; j < 9; j++){
+					if(board[i][j] == 1){
+						var bigX = game.add.sprite(27 + 30*j, 27 + 30*i, 'krestik');
+						bigX.alpha = 0.1;
+					}
+					if(board[i][j] == 2){
+						var bigO = game.add.sprite(27 + 30*j, 27 + 30*i, 'nolik');
+						bigO.alpha = 0.1;
+					}
+				}
+			}
+			for(var i = 0; i < 3; i++){
+				for(var j = 0; j < 3; j++){
+					if (MainBoard[i][j] == 1) {
+						game.add.sprite(27 + 90*j, 27 + 90*i, 'krestik2');
+					}
+					if (MainBoard[i][j] == 2) {
+						game.add.sprite(27 + 90*j, 27 + 90*i, 'nolik2');
+					}
+				}
+			}
+			if( YouPlay == 0 ) {
+				game.add.sprite(27 + 30*StarO, 27 + 30*StarX, 'nolikStar');
+			}
+			else {
+				game.add.sprite(27 + 30*StarO, 27 + 30*StarX, 'krestikStar');
+			}
+		}
+		
+		function YourHod(x, y) {
+			if(possibleHod() && (AllEndGame() == false) && (WhoseTurn == 1)){
+				var cursorGemPosX = Math.floor((x-25)/30);
+				var cursorGemPosY = Math.floor((y-25)/30);
+				if ( cursorGemPosX > -1 && cursorGemPosX < 9 && cursorGemPosY > -1 && cursorGemPosY < 9) {
+					if(CurrentX == -1 && CurrentY == -1){
+						if(MainBoard[Math.floor(cursorGemPosY/3)][Math.floor(cursorGemPosX/3)] == 0) {
+							if(board[cursorGemPosY][cursorGemPosX] == 0){
+								board[cursorGemPosY][cursorGemPosX] = YouPlay+1;
+								WhoseTurn = 0;
+								CurrentY = cursorGemPosX%3;
+								CurrentX = cursorGemPosY%3;
+								checkWin();
+								if(MainBoard[CurrentX][CurrentY] != 0) {
+									CurrentX = -1; 
+									CurrentY = -1;
+								}
+								if ((AllEndGame() == false)) HodComputer();
+							}
+						}
+					}
+					else if (3*CurrentY <= cursorGemPosX && cursorGemPosX <= 3*CurrentY+2 && 3*CurrentX <= cursorGemPosY && cursorGemPosY <= 3*CurrentX+2){
+						if(board[cursorGemPosY][cursorGemPosX] == 0){
+							board[cursorGemPosY][cursorGemPosX] = YouPlay+1;
+							WhoseTurn = 0;
+							CurrentY = cursorGemPosX%3;
+							CurrentX = cursorGemPosY%3;
+							checkWin();
+							if(MainBoard[CurrentX][CurrentY] != 0) {
+								CurrentX = -1; 
+								CurrentY = -1;
+							}
+							if ((AllEndGame() == false)) HodComputer();
+						}
+					}
+				}
+				
+			}
+		}
+		
+		function HodComputer(){
+			//изменить функцию possibleHod
+			if(possibleHod() && (AllEndGame() == false)){
+				var telocikla = true;
+				while(telocikla){
+					RandomX = game.rnd.integerInRange(0,2);
+					RandomY = game.rnd.integerInRange(0,2);
+					stroka = game.rnd.integerInRange(0,2);
+					stob  = game.rnd.integerInRange(0,2);
+					if (CurrentX == -1 && CurrentY == -1){
+						if(MainBoard[stroka][stob] == 0) {
+							//ЕСЛИ МОЖНО ЗАКОНЧИТЬ ЛИНИЮ
+							if( ThreeRyad()){
+								telocikla = false;
+								WhoseTurn = 1;
+								checkWin();
+								if(MainBoard[CurrentX][CurrentY] != 0) {
+									CurrentX = -1; 
+									CurrentY = -1;
+								}
+							}
+							//ЕСЛИ МОЖНО ПОСТАВИТЬ ВТОРОЙ В РЯД
+							
+							//РАНДОМНЫЙ ХОД
+							else if(board[RandomX + 3*stroka][RandomY + 3*stob] == 0){
+								board[RandomX + 3*stroka][RandomY + 3*stob] = (1 - YouPlay) + 1;
+								
+								StarX = RandomX + 3*stroka;
+								StarO = RandomY + 3*stob;
+								
+								CurrentX = RandomX;
+								CurrentY = RandomY;
+								telocikla = false;
+								WhoseTurn = 1;
+								checkWin();
+								if(MainBoard[CurrentX][CurrentY] != 0) {
+									CurrentX = -1; 
+									CurrentY = -1;
+								}
+							}
+						}
+					}
+					else {
+						stroka = CurrentX;
+						stob = CurrentY;
+						if(MainBoard[CurrentX][CurrentY] == 0) {
+							//ЕСЛИ МОЖНО ЗАКОНЧИТЬ ЛИНИЮ
+							if( ThreeRyad()){
+								telocikla = false;
+								WhoseTurn = 1;
+								checkWin();
+								if(MainBoard[CurrentX][CurrentY] != 0) {
+									CurrentX = -1; 
+									CurrentY = -1;
+								}
+							}
+							//ЕСЛИ МОЖНО ПОСТАВИТЬ ВТОРОЙ В РЯД
+							
+							//РАНДОМНЫЙ ХОД
+							else if(board[RandomX + 3*CurrentX][RandomY + 3*CurrentY] == 0){
+								board[RandomX + 3*CurrentX][RandomY + 3*CurrentY] = (1 - YouPlay) + 1;
+								
+								StarX = RandomX + 3*CurrentX;
+								StarO = RandomY + 3*CurrentY;
+								
+								CurrentX = RandomX;
+								CurrentY = RandomY;
+								telocikla = false;
+								WhoseTurn = 1;
+								checkWin();
+								if(MainBoard[CurrentX][CurrentY] != 0) {
+									CurrentX = -1; 
+									CurrentY = -1;
+								}
+
+							}
+						}
+					}
+				}
+				
+			}
+			TextWhoWin.text = "Line - " + (CurrentX + 1) + ". Column - " + (CurrentY+1); 
+			if(AllEndGame()){}
+		}
+		
+		function possibleHod(){
+			var estlivoobshehod = false;
+			for(var i = 0; i < 3; i++){
+				for(var j = 0; j < 3; j++){
+						if (MainBoard[i][j] == 0) estlivoobshehod = true;
+				}
+			}
+			if (estlivoobshehod == false) return false;
+			estlivoobshehod = false;
+			for(var i = 0; i < 9; i++){
+				for(var j = 0; j < 9; j++){
+					if(board[i][j] == 0) estlivoobshehod = true;
+				}
+			}
+			if (estlivoobshehod == false){
+				TextWhoWin.text = "Draw";
+				return false;
+			}
+			return true;
+		}
+		
+		function checkWin(){
+			for(var i = 0; i < 3; i++){
+				for(var j = 0; j < 3; j++){
+					if(board[0+3*i][0+3*j] > 0 && board[0+3*i][1+3*j] > 0 && board[0+3*i][2+3*j] > 0 &&
+						board[1+3*i][0+3*j] > 0 && board[1+3*i][1+3*j] > 0 && board[1+3*i][2+3*j] > 0 &&
+						board[2+3*i][0+3*j] > 0 && board[2+3*i][1+3*j] > 0 && board[2+3*i][2+3*j] > 0 ){
+						MainBoard[i][j] = -1;
+					}
+				
+					if( (board[0+3*i][0+3*j] == board[0+3*i][1+3*j]  && board[0+3*i][0+3*j] == board[0+3*i][2+3*j] && board[0+3*i][0+3*j] > 0 ) || 
+						(board[0+3*i][0+3*j] == board[1+3*i][0+3*j]  && board[0+3*i][0+3*j] == board[2+3*i][0+3*j] && board[0+3*i][0+3*j] > 0 ) ||
+						(board[0+3*i][0+3*j] == board[1+3*i][1+3*j]  && board[0+3*i][0+3*j] == board[2+3*i][2+3*j] && board[0+3*i][0+3*j] > 0 )
+						){
+						MainBoard[i][j] = board[0+3*i][0+3*j];
+					}
+					
+					if( (board[1+3*i][0+3*j] == board[1+3*i][1+3*j]  && board[1+3*i][0+3*j] == board[1+3*i][2+3*j] && board[1+3*i][0+3*j] > 0 ) ){
+						MainBoard[i][j] = board[1+3*i][0+3*j];
+					}
+					if( 
+						(board[2+3*i][0+3*j] == board[2+3*i][1+3*j]  && board[2+3*i][0+3*j] == board[2+3*i][2+3*j] && board[2+3*i][0+3*j] > 0 )
+						){
+						MainBoard[i][j] = board[2+3*i][0+3*j];
+					}
+					if( 
+						(board[0+3*i][1+3*j] == board[1+3*i][1+3*j]  && board[0+3*i][1+3*j] == board[2+3*i][1+3*j] && board[0+3*i][1+3*j] > 0 )
+						){
+						MainBoard[i][j] =  board[0+3*i][1+3*j];
+					}
+					if( 
+						(board[0+3*i][2+3*j] == board[1+3*i][2+3*j]  && board[0+3*i][2+3*j] == board[2+3*i][2+3*j] && board[0+3*i][2+3*j] > 0 ) ||
+						(board[0+3*i][2+3*j] == board[1+3*i][1+3*j]  && board[0+3*i][2+3*j] == board[2+3*i][0+3*j] && board[0+3*i][2+3*j] > 0 ) 
+						){
+						MainBoard[i][j] = board[0+3*i][2+3*j];
+					}
+				}
+			}
+		}
+		
+		function AllEndGame(){
+			if( (MainBoard[0][0] == MainBoard[0][1]  && MainBoard[0][0] == MainBoard[0][2] && MainBoard[0][0] > 0 ) || 
+				(MainBoard[0][0] == MainBoard[1][0]  && MainBoard[0][0] == MainBoard[2][0] && MainBoard[0][0] > 0 ) ||
+				(MainBoard[0][0] == MainBoard[1][1]  && MainBoard[0][0] == MainBoard[2][2] && MainBoard[0][0] > 0 )
+				){
+				TextWhoWin.text = "Win - ";
+				if (MainBoard[0][0] == 1) TextWhoWin.text += "X!";
+				if (MainBoard[0][0] == 2) TextWhoWin.text += "O!";
+				return true;
+			}
+			
+			if( (MainBoard[1][0] == MainBoard[1][1]  && MainBoard[1][0] == MainBoard[1][2] && MainBoard[1][0] > 0 ) ){
+				TextWhoWin.text = "Win - ";
+				if (MainBoard[1][0] == 1) TextWhoWin.text += "X!";
+				if (MainBoard[1][0] == 2) TextWhoWin.text += "O!";
+				return true;
+			}
+			if((MainBoard[2][0] == MainBoard[2][1]  && MainBoard[2][0] == MainBoard[2][2] && MainBoard[2][0] > 0 )){
+				TextWhoWin.text = "Win - ";
+				if (MainBoard[2][0] == 1) TextWhoWin.text += "X!";
+				if (MainBoard[2][0] == 2) TextWhoWin.text += "O!";
+				return true;
+			}
+			if( (MainBoard[0][1] == MainBoard[1][1]  && MainBoard[0][1] == MainBoard[2][1] && MainBoard[0][1] > 0 )){
+				TextWhoWin.text = "Win - ";
+				if (MainBoard[0][1] == 1) TextWhoWin.text += "X!";
+				if (MainBoard[0][1] == 2) TextWhoWin.text += "O!";
+				return true;
+			}
+			if( (MainBoard[0][2] == MainBoard[1][2]  && MainBoard[0][2] == MainBoard[2][2] && MainBoard[0][2] > 0 ) ||
+				(MainBoard[0][2] == MainBoard[1][1]  && MainBoard[0][2] == MainBoard[2][0] && MainBoard[0][2] > 0 ) ){
+				TextWhoWin.text = "Win - ";
+				if (MainBoard[0][2] == 1) TextWhoWin.text += "X!";
+				if (MainBoard[0][2] == 2) TextWhoWin.text += "O!";
+				return true;
+			}
+			if(MainBoard[0][0] != 0  && MainBoard[0][1] != 0  && MainBoard[0][2] != 0  &&
+							MainBoard[1][0] != 0  && MainBoard[1][1] != 0  && MainBoard[1][2] != 0  &&
+								MainBoard[2][0] != 0  && MainBoard[2][1] != 0  &&  MainBoard[2][2] != 0  ){
+				TextWhoWin.text = "Draw!";
+				return true;
+			}
+			return false;
+		}
+		
+		function ThreeRyad(){ 
+			//TextWhoWin.text = "";
+			var neobhodimoPoint; // какую сумму нужно получить в строках, столбцах и тд. Если будет встречаться противник сразу ставить 5.
+			if (YouPlay == 0) {
+				neobhodimoPoint = 4;
+			}
+			else{
+				neobhodimoPoint = 2;
+			}
+			//TextWhoWin.text += "neobhodimoPoint = " + neobhodimoPoint + ". \n";
+			//проверим "прямо в лоб" на количество очков в каждой строке/столбце/диагонали, если сопадет, то посмотрим более детально каждый случай.
+			//строки
+			for(var i = 0; i < 3; i++){
+				//TextWhoWin.text += "I = " + i + ". \n";
+				var dfgkjdf = (board[i + 3*stroka][0 + 3*stob] + board[i + 3*stroka][1 + 3*stob] + board[i + 3*stroka][2 + 3*stob]);
+				//TextWhoWin.text += "s = " + dfgkjdf + ". \n";
+				if( (board[i + 3*stroka][0 + 3*stob] + board[i + 3*stroka][1 + 3*stob] + board[i + 3*stroka][2 + 3*stob]) == neobhodimoPoint){
+					TextWhoWin.text += board[i + 3*stroka][0 + 3*stob] + "/" + board[i + 3*stroka][1 + 3*stob] + "/" + board[i + 3*stroka][2 + 3*stob];
+					if(((board[i + 3*stroka][0 + 3*stob] == 0) || (board[i + 3*stroka][0 + 3*stob] == (1 - YouPlay) + 1)) &&
+					   ((board[i + 3*stroka][1 + 3*stob] == 0) || (board[i + 3*stroka][1 + 3*stob] == (1 - YouPlay) + 1)) && 
+					   ((board[i + 3*stroka][2 + 3*stob] == 0) || (board[i + 3*stroka][2 + 3*stob] == (1 - YouPlay) + 1))){
+						if(board[i + 3*stroka][0 + 3*stob] == 0){
+							board[i + 3*stroka][0 + 3*stob] = (1 - YouPlay) + 1;
+									
+							StarX = i + 3*stroka;
+							StarO = 0 + 3*stob;
+							
+							CurrentX = i;
+							CurrentY = 0;
+							return true;
+						}
+						if(board[i + 3*stroka][1 + 3*stob] == 0){
+							board[i + 3*stroka][1 + 3*stob] = (1 - YouPlay) + 1;
+									
+							StarX = i + 3*stroka;
+							StarO = 1 + 3*stob;
+							
+							CurrentX = i;
+							CurrentY = 1;
+							return true;
+						}
+						if(board[i + 3*stroka][2 + 3*stob] == 0){
+							board[i + 3*stroka][2 + 3*stob] = (1 - YouPlay) + 1;
+									
+							StarX = i + 3*stroka;
+							StarO = 2 + 3*stob;
+							
+							CurrentX = i;
+							CurrentY = 2;
+							return true;
+						}
+					}
+				}
+			}
+			//столбцы
+			for(var j = 0; j < 3; j++){
+				if( (board[0 + 3*stroka][j + 3*stob] + board[1 + 3*stroka][j + 3*stob] + board[2 + 3*stroka][j + 3*stob]) == neobhodimoPoint){
+					if(((board[0 + 3*stroka][j + 3*stob] == 0) || (board[0 + 3*stroka][j + 3*stob] == (1 - YouPlay) + 1)) &&
+					   ((board[1 + 3*stroka][j + 3*stob] == 0) || (board[1 + 3*stroka][j + 3*stob] == (1 - YouPlay) + 1)) && 
+					   ((board[2 + 3*stroka][j + 3*stob] == 0) || (board[2 + 3*stroka][j + 3*stob] == (1 - YouPlay) + 1))){
+						if(board[0 + 3*stroka][j + 3*stob] == 0){
+							board[0 + 3*stroka][j + 3*stob] = (1 - YouPlay) + 1;
+									
+							StarX = 0 + 3*stroka;
+							StarO = j + 3*stob;
+							
+							CurrentX = 0;
+							CurrentY = j;
+							return true;
+						}
+						if(board[1 + 3*stroka][j + 3*stob] == 0){
+							board[1 + 3*stroka][j + 3*stob] = (1 - YouPlay) + 1;
+									
+							StarX = 1 + 3*stroka;
+							StarO = j + 3*stob;
+							
+							CurrentX = 1;
+							CurrentY = j;
+							return true;
+						}
+						if(board[2 + 3*stroka][j + 3*stob] == 0){
+							board[2 + 3*stroka][j + 3*stob] = (1 - YouPlay) + 1;
+									
+							StarX = 2 + 3*stroka;
+							StarO = j + 3*stob;
+							
+							CurrentX = 2;
+							CurrentY = j;
+							return true;
+						}
+					}
+				}
+			}
+			//две диагонали
+			if( (board[0 + 3*stroka][0 + 3*stob] + board[1 + 3*stroka][1 + 3*stob] + board[2 + 3*stroka][2 + 3*stob]) == neobhodimoPoint){
+				if(((board[0 + 3*stroka][0 + 3*stob] == 0) || (board[0 + 3*stroka][0 + 3*stob] == (1 - YouPlay) + 1)) &&
+				   ((board[1 + 3*stroka][1 + 3*stob] == 0) || (board[1 + 3*stroka][1 + 3*stob] == (1 - YouPlay) + 1)) && 
+				   ((board[2 + 3*stroka][2 + 3*stob] == 0) || (board[2 + 3*stroka][2 + 3*stob] == (1 - YouPlay) + 1))){
+					if(board[0 + 3*stroka][0 + 3*stob] == 0){
+						board[0 + 3*stroka][0 + 3*stob] = (1 - YouPlay) + 1;
+								
+						StarX = 0 + 3*stroka;
+						StarO = 0 + 3*stob;
+						
+						CurrentX = 0;
+						CurrentY = 0;
+						return true;
+					}
+					if(board[1 + 3*stroka][1 + 3*stob] == 0){
+						board[1 + 3*stroka][1 + 3*stob] = (1 - YouPlay) + 1;
+								
+						StarX = 1 + 3*stroka;
+						StarO = 1 + 3*stob;
+						
+						CurrentX = 1;
+						CurrentY = 1;
+						return true;
+					}
+					if(board[2 + 3*stroka][2 + 3*stob] == 0){
+						board[2 + 3*stroka][2 + 3*stob] = (1 - YouPlay) + 1;
+								
+						StarX = 2 + 3*stroka;
+						StarO = 2 + 3*stob;
+						
+						CurrentX = 2;
+						CurrentY = 2;
+						return true;
+					}
+				}
+			}
+			if( (board[2 + 3*stroka][0 + 3*stob] + board[1 + 3*stroka][1 + 3*stob] + board[0 + 3*stroka][2 + 3*stob]) == neobhodimoPoint){
+				if(((board[2 + 3*stroka][0 + 3*stob] == 0) || (board[2 + 3*stroka][0 + 3*stob] == (1 - YouPlay) + 1)) &&
+				   ((board[1 + 3*stroka][1 + 3*stob] == 0) || (board[1 + 3*stroka][1 + 3*stob] == (1 - YouPlay) + 1)) && 
+				   ((board[0 + 3*stroka][2 + 3*stob] == 0) || (board[0 + 3*stroka][2 + 3*stob] == (1 - YouPlay) + 1))){
+					if(board[2 + 3*stroka][0 + 3*stob] == 0){
+						board[2 + 3*stroka][0 + 3*stob] = (1 - YouPlay) + 1;
+								
+						StarX = 2 + 3*stroka;
+						StarO = 0 + 3*stob;
+						
+						CurrentX = 2;
+						CurrentY = 0;
+						return true;
+					}
+					if(board[1 + 3*stroka][1 + 3*stob] == 0){
+						board[1 + 3*stroka][1 + 3*stob] = (1 - YouPlay) + 1;
+								
+						StarX = 1 + 3*stroka;
+						StarO = 1 + 3*stob;
+						
+						CurrentX = 1;
+						CurrentY = 1;
+						return true;
+					}
+					if(board[0 + 3*stroka][2 + 3*stob] == 0){
+						board[0 + 3*stroka][2 + 3*stob] = (1 - YouPlay) + 1;
+								
+						StarX = 0 + 3*stroka;
+						StarO = 2 + 3*stob;
+						
+						CurrentX = 0;
+						CurrentY = 2;
+						return true;
+					}
+				}
+			}
+			return false;
+		}
+		
+		</script>
+
+    </body>
+</html>
